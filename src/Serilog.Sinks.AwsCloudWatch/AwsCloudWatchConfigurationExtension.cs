@@ -39,6 +39,7 @@ namespace Serilog.Sinks.AwsCloudWatch
         /// <param name="logGroupName">The log group name to be used in AWS CloudWatch.</param>
         /// <param name="logStreamNameProvider">The log stream name provider.</param>
         /// <param name="textFormatter">The text formatter to use to format log messages.</param>
+        /// <param name="amazonClientProvider">The provider used to create the AmazonCloudWatchLogs client used by this sink.</param>
         /// <param name="logEventRenderer">A renderer to render Serilog's LogEvent.</param>
         /// <param name="minimumLogEventLevel">The minimum log event level required in order to write an event to the sink.</param>
         /// <param name="batchSizeLimit">The batch size to be used when uploading logs to AWS CloudWatch.</param>
@@ -52,6 +53,7 @@ namespace Serilog.Sinks.AwsCloudWatch
             string logGroupName,
             ILogStreamNameProvider logStreamNameProvider = null,
             ITextFormatter textFormatter = null,
+            IAmazonCloudWatchLogsProvider amazonClientProvider = null,
             ILogEventRenderer logEventRenderer = null,
             LogEventLevel minimumLogEventLevel = CloudWatchSinkOptions.DefaultMinimumLogEventLevel,
             int batchSizeLimit = CloudWatchSinkOptions.DefaultBatchSizeLimit,
@@ -74,7 +76,8 @@ namespace Serilog.Sinks.AwsCloudWatch
                 CreateLogGroup = createLogGroup
             };
 
-            var client = CreateClient();
+            var client = (amazonClientProvider ?? new DefaultAmazonCloudWatchLogsProvider()).GetClient();
+
             return loggerConfiguration.AmazonCloudWatch(options, client);
         }
 
@@ -87,6 +90,7 @@ namespace Serilog.Sinks.AwsCloudWatch
         /// <param name="logStreamName">The log stream name to use.</param>
         /// <param name="textFormatter">The text formatter to use to format log messages.</param>
         /// <param name="logEventRenderer">A renderer to render Serilog's LogEvent.</param>
+        /// <param name="amazonClientProvider">The provider used to create the AmazonCloudWatchLogs client used by this sink.</param>
         /// <param name="minimumLogEventLevel">The minimum log event level required in order to write an event to the sink.</param>
         /// <param name="batchSizeLimit">The batch size to be used when uploading logs to AWS CloudWatch.</param>
         /// <param name="period">The period to be used when a batch upload should be triggered.</param>
@@ -100,6 +104,7 @@ namespace Serilog.Sinks.AwsCloudWatch
             string logGroupName,
             string logStreamName,
             ITextFormatter textFormatter = null,
+            IAmazonCloudWatchLogsProvider amazonClientProvider = null,
             ILogEventRenderer logEventRenderer = null,
             LogEventLevel minimumLogEventLevel = CloudWatchSinkOptions.DefaultMinimumLogEventLevel,
             int batchSizeLimit = CloudWatchSinkOptions.DefaultBatchSizeLimit,
@@ -123,13 +128,9 @@ namespace Serilog.Sinks.AwsCloudWatch
                 CreateLogGroup = createLogGroup
             };
 
-            var client = CreateClient();
-            return loggerConfiguration.AmazonCloudWatch(options, client);
-        }
+            var client = (amazonClientProvider ?? new DefaultAmazonCloudWatchLogsProvider()).GetClient();
 
-        private static IAmazonCloudWatchLogs CreateClient()
-        {
-            return new AmazonCloudWatchLogsClient();
+            return loggerConfiguration.AmazonCloudWatch(options, client);
         }
     }
 }
