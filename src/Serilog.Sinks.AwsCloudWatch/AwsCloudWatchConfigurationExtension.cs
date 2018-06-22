@@ -38,68 +38,28 @@ namespace Serilog.Sinks.AwsCloudWatch
         /// <param name="loggerConfiguration">The LoggerSinkConfiguration to register this sink with.</param>
         /// <param name="logGroupName">The log group name to be used in AWS CloudWatch.</param>
         /// <param name="logStreamNameProvider">The log stream name provider.</param>
+        /// <param name="textFormatter">The text formatter to use to format log messages.</param>
         /// <param name="logEventRenderer">A renderer to render Serilog's LogEvent.</param>
         /// <param name="minimumLogEventLevel">The minimum log event level required in order to write an event to the sink.</param>
         /// <param name="batchSizeLimit">The batch size to be used when uploading logs to AWS CloudWatch.</param>
         /// <param name="period">The period to be used when a batch upload should be triggered.</param>
+        /// <param name="retryAttempts">The number of attempts to send log data to AWS CloudWatch.</param>
+        /// <param name="createLogGroup">If true, this sink will create the log group if it does not exist.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"><paramref name="logGroupName"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="logStreamNameProvider"/> is <see langword="null"/>.</exception>
         public static LoggerConfiguration AmazonCloudWatch(
             this LoggerSinkConfiguration loggerConfiguration,
             string logGroupName,
-            ILogStreamNameProvider logStreamNameProvider,
-            ILogEventRenderer logEventRenderer = null,
-            LogEventLevel minimumLogEventLevel = CloudWatchSinkOptions.DefaultMinimumLogEventLevel,
-            int batchSizeLimit = CloudWatchSinkOptions.DefaultBatchSizeLimit,
-            TimeSpan? period = null,
-            bool createLogGroup = CloudWatchSinkOptions.DefaultCreateLogGroup)
-        {
-            if (logGroupName == null) throw new ArgumentNullException(nameof(logGroupName));
-            if (logStreamNameProvider == null) { throw new ArgumentNullException(nameof(logStreamNameProvider)); }
-
-            var options = new CloudWatchSinkOptions
-            {
-                LogGroupName = logGroupName,
-                MinimumLogEventLevel = minimumLogEventLevel,
-                BatchSizeLimit = batchSizeLimit,
-                Period = period ?? CloudWatchSinkOptions.DefaultPeriod,
-                LogStreamNameProvider = logStreamNameProvider,
-                LogEventRenderer = logEventRenderer,
-                CreateLogGroup = createLogGroup
-            };
-
-            var client = CreateClient();
-            return loggerConfiguration.AmazonCloudWatch(options, client);
-        }
-
-        /// <summary>
-        /// Activates logging to AWS CloudWatch
-        /// </summary>
-        /// <remarks>This overload is intended to be used via AppSettings integration.</remarks>
-        /// <param name="loggerConfiguration">The LoggerSinkConfiguration to register this sink with.</param>
-        /// <param name="logGroupName">The log group name to be used in AWS CloudWatch.</param>
-        /// <param name="logStreamNameProvider">The log stream name provider.</param>
-        /// <param name="logEventRenderer">A renderer to render Serilog's LogEvent.</param>
-        /// <param name="minimumLogEventLevel">The minimum log event level required in order to write an event to the sink.</param>
-        /// <param name="batchSizeLimit">The batch size to be used when uploading logs to AWS CloudWatch.</param>
-        /// <param name="period">The period to be used when a batch upload should be triggered.</param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException"><paramref name="logGroupName"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="logStreamNameProvider"/> is <see langword="null"/>.</exception>
-        public static LoggerConfiguration AmazonCloudWatch(
-            this LoggerSinkConfiguration loggerConfiguration,
-            string logGroupName,
-            ILogStreamNameProvider logStreamNameProvider,
+            ILogStreamNameProvider logStreamNameProvider = null,
             ITextFormatter textFormatter = null,
             ILogEventRenderer logEventRenderer = null,
             LogEventLevel minimumLogEventLevel = CloudWatchSinkOptions.DefaultMinimumLogEventLevel,
             int batchSizeLimit = CloudWatchSinkOptions.DefaultBatchSizeLimit,
             TimeSpan? period = null,
+            byte retryAttempts = CloudWatchSinkOptions.DefaultRetryAttempts,
             bool createLogGroup = CloudWatchSinkOptions.DefaultCreateLogGroup)
         {
             if (logGroupName == null) throw new ArgumentNullException(nameof(logGroupName));
-            if (logStreamNameProvider == null) { throw new ArgumentNullException(nameof(logStreamNameProvider)); }
 
             var options = new CloudWatchSinkOptions
             {
@@ -107,10 +67,11 @@ namespace Serilog.Sinks.AwsCloudWatch
                 MinimumLogEventLevel = minimumLogEventLevel,
                 BatchSizeLimit = batchSizeLimit,
                 Period = period ?? CloudWatchSinkOptions.DefaultPeriod,
-                LogStreamNameProvider = logStreamNameProvider,
+                LogStreamNameProvider = logStreamNameProvider ?? new DefaultLogStreamProvider(),
                 LogEventRenderer = logEventRenderer,
-                CreateLogGroup = createLogGroup,
+                RetryAttempts = retryAttempts,
                 TextFormatter = textFormatter,
+                CreateLogGroup = createLogGroup
             };
 
             var client = CreateClient();
@@ -123,27 +84,31 @@ namespace Serilog.Sinks.AwsCloudWatch
         /// <remarks>This overload is intended to be used via AppSettings integration.</remarks>
         /// <param name="loggerConfiguration">The LoggerSinkConfiguration to register this sink with.</param>
         /// <param name="logGroupName">The log group name to be used in AWS CloudWatch.</param>
-        /// <param name="accessKey">The access key to use to access AWS CloudWatch.</param>
-        /// <param name="secretAccessKey">The secret access key to use to access AWS CloudWatch.</param>
-        /// <param name="regionName">The system name of the region to which to write.</param>
-        /// <param name="logStreamNamePrefix">The log stream name prefix. Will use default log stream name if leave empty.</param>
+        /// <param name="logStreamName">The log stream name to use.</param>
+        /// <param name="textFormatter">The text formatter to use to format log messages.</param>
         /// <param name="logEventRenderer">A renderer to render Serilog's LogEvent.</param>
         /// <param name="minimumLogEventLevel">The minimum log event level required in order to write an event to the sink.</param>
         /// <param name="batchSizeLimit">The batch size to be used when uploading logs to AWS CloudWatch.</param>
         /// <param name="period">The period to be used when a batch upload should be triggered.</param>
+        /// <param name="retryAttempts">The number of attempts to send log data to AWS CloudWatch.</param>
+        /// <param name="createLogGroup">If true, this sink will create the log group if it does not exist.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"><paramref name="logGroupName"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="logStreamName"/> is <see langword="null"/>.</exception>
         public static LoggerConfiguration AmazonCloudWatch(
             this LoggerSinkConfiguration loggerConfiguration,
             string logGroupName,
-            string logStreamNamePrefix = null,
+            string logStreamName,
+            ITextFormatter textFormatter = null,
             ILogEventRenderer logEventRenderer = null,
             LogEventLevel minimumLogEventLevel = CloudWatchSinkOptions.DefaultMinimumLogEventLevel,
             int batchSizeLimit = CloudWatchSinkOptions.DefaultBatchSizeLimit,
             TimeSpan? period = null,
+            byte retryAttempts = CloudWatchSinkOptions.DefaultRetryAttempts,
             bool createLogGroup = CloudWatchSinkOptions.DefaultCreateLogGroup)
         {
             if (logGroupName == null) throw new ArgumentNullException(nameof(logGroupName));
+            if (logStreamName == null) { throw new ArgumentNullException(nameof(logStreamName)); }
 
             var options = new CloudWatchSinkOptions
             {
@@ -151,58 +116,12 @@ namespace Serilog.Sinks.AwsCloudWatch
                 MinimumLogEventLevel = minimumLogEventLevel,
                 BatchSizeLimit = batchSizeLimit,
                 Period = period ?? CloudWatchSinkOptions.DefaultPeriod,
+                LogStreamNameProvider = new ConstantLogStreamNameProvider(logStreamName),
                 LogEventRenderer = logEventRenderer,
+                RetryAttempts = retryAttempts,
+                TextFormatter = textFormatter,
                 CreateLogGroup = createLogGroup
             };
-
-            if (!String.IsNullOrWhiteSpace(logStreamNamePrefix))
-            {
-                options.LogStreamNameProvider = new ConstantLogStreamNameProvider(logStreamNamePrefix);
-            }
-
-            var client = CreateClient();
-            return loggerConfiguration.AmazonCloudWatch(options, client);
-        }
-
-        /// <summary>
-        /// Activates logging to AWS CloudWatch
-        /// </summary>
-        /// <remarks>This overload is intended to be used via AppSettings integration.</remarks>
-        /// <param name="loggerConfiguration">The LoggerSinkConfiguration to register this sink with.</param>
-        /// <param name="logGroupName">The log group name to be used in AWS CloudWatch.</param>
-        /// <param name="logStreamNamePrefix">The log stream name prefix. Will use default log stream name if leave empty.</param>
-        /// <param name="formatter">A formatter to format Serilog's LogEvent.</param>
-        /// <param name="minimumLogEventLevel">The minimum log event level required in order to write an event to the sink.</param>
-        /// <param name="batchSizeLimit">The batch size to be used when uploading logs to AWS CloudWatch.</param>
-        /// <param name="period">The period to be used when a batch upload should be triggered.</param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException"><paramref name="logGroupName"/> is <see langword="null"/>.</exception>
-        public static LoggerConfiguration AmazonCloudWatch(
-            this LoggerSinkConfiguration loggerConfiguration,
-            string logGroupName,
-            ITextFormatter formatter,
-            string logStreamNamePrefix = null,
-            LogEventLevel minimumLogEventLevel = CloudWatchSinkOptions.DefaultMinimumLogEventLevel,
-            int batchSizeLimit = CloudWatchSinkOptions.DefaultBatchSizeLimit,
-            TimeSpan? period = null,
-            bool createLogGroup = CloudWatchSinkOptions.DefaultCreateLogGroup)
-        {
-            if (logGroupName == null) throw new ArgumentNullException(nameof(logGroupName));
-
-            var options = new CloudWatchSinkOptions
-            {
-                LogGroupName = logGroupName,
-                MinimumLogEventLevel = minimumLogEventLevel,
-                BatchSizeLimit = batchSizeLimit,
-                Period = period ?? CloudWatchSinkOptions.DefaultPeriod,
-                TextFormatter = formatter,
-                CreateLogGroup = createLogGroup
-            };
-
-            if (!String.IsNullOrWhiteSpace(logStreamNamePrefix))
-            {
-                options.LogStreamNameProvider = new ConstantLogStreamNameProvider(logStreamNamePrefix);
-            }
 
             var client = CreateClient();
             return loggerConfiguration.AmazonCloudWatch(options, client);
