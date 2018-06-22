@@ -10,22 +10,22 @@ This Serilog Sink allows to log to [AWS CloudWatch](https://aws.amazon.com/cloud
 
 ## Usage
 
+### Configuration in code
+
 ```cs
 // name of the log group
 var logGroupName = "myLogGroup/" + env.EnvironmentName;
 
-// customer renderer (optional, defaults to a simple rendered message of Serilog's LogEvent
-var renderer = new MyCustomRenderer();
+// Custom message formatter (optional, defaults to MessageTemplateTextFormatter)
+var textFormatter = new MyCustomTextFormatter();
 
 // options for the sink defaults in https://github.com/Cimpress-MCP/serilog-sinks-awscloudwatch/blob/master/src/Serilog.Sinks.AwsCloudWatch/CloudWatchSinkOptions.cs
 CloudWatchSinkOptions options = new CloudWatchSinkOptions
 {
   LogGroupName = logGroupName,
 
-  // Pick one of the following
-  LogEventRenderer = MyCustomRenderer,
-  TextFormatter = MyCustomTextFormatter,
-  
+  TextFormatter = textFormatter,
+
   // other defaults defaults
   MinimumLogEventLevel = LogEventLevel.Information,
   BatchSizeLimit = 100,
@@ -43,6 +43,46 @@ IAmazonCloudWatchLogs client = new AmazonCloudWatchLogsClient(credentials, myAws
 Log.Logger = new LoggerConfiguration().MinimumLevel.Information()
   .WriteTo.AmazonCloudWatch(options, client)
   .CreateLogger();
+```
+
+### Configuration via file
+
+This example uses the appsettings.json format defined by
+[Serilog.Settings.Configuration](https://github.com/serilog/serilog-settings-configuration).
+
+```json
+{
+  "Serilog": {
+    "WriteTo": [
+      {
+        "Name": "AmazonCloudWatch",
+        "Args": {
+          "logGroupName": "my-app",
+
+          // If logStreamName is given, a constant log stream name is used.
+          // If logStreamNameProvider is given, that type is constructed and used to generate the name.
+          // Otherwise, omit both of these to use: <date>_<hostname>_<new GUID>
+          "logStreamName": "my-log-stream",
+          "logStreamNameProvider": "CoolStuff.MyProject.MyLogStreamNameProvider, CoolStuff.MyProject"
+
+          // If you need to run custom code to construct the IAmazonCloudWatchClient,
+          // you can specify a provider here. Otherwise, the sink will
+          // use `new AmazonCloudWatchLogsClient()`.
+          "amazonClientProvider": "CoolStuff.MyProject.MyAmazonClientProvider, CoolStuff.MyProject"
+
+          // All of the following are optional
+
+          "textFormatter": "CoolStuff.MyProject.MyJsonTextFormatter, CoolStuff.MyProject",
+          "minimumLogEventLevel": "Information",
+          "batchSizeLimit": 100,
+          "period": "00:00:10",
+          "createLogGroup": true,
+          "retryAttempts": 5
+        }
+      }
+    ]
+  }
+}
 ```
 
 ## Troubleshooting
